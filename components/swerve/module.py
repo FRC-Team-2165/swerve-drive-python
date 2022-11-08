@@ -1,6 +1,6 @@
 import math
 
-import wpilib.kinematics as kinematics
+import wpimath.kinematics as kinematics
 from wpimath.controller import PIDController
 from wpimath.geometry import Rotation2d
 
@@ -12,7 +12,7 @@ SWERVE_WHEEL_RADIUS = 0.0508 # meters
 SWERVE_WHEEL_CIRCUMFERENCE = 2 * math.pi * SWERVE_WHEEL_RADIUS 
 
 from dataclasses import dataclass
-from wpilib.geometry import Translation2d
+from wpimath.geometry import Translation2d
 
 @dataclass
 class SwerveModuleConfig:
@@ -47,8 +47,6 @@ class SwerveModule:
     turn_motor: FalconMotor
     turn_encoder: ctre.CANCoder
 
-    angle_pid: PIDController
-
     gear_ratio: float
 
 
@@ -58,7 +56,6 @@ class SwerveModule:
         self.turn_encoder = ctre.WPI_CANCoder(config.turn_encoder_id)
 
         self.drive_motor.setInverted(config.inverted)
-        self.turn_motor.configIntegratedSensorOffset(config.angle_offset)
 
         self.gear_ratio = config.gear_ratio
         
@@ -72,10 +69,22 @@ class SwerveModule:
 
     def set_state(self, state: kinematics.SwerveModuleState) -> None:
         """
-        Sets the state of the module. Runs optimization to minimize heading change.
+        Sets the state of the module, with speed being from [-1, 1]. Runs optimization to minimize heading change.
         """
-        state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(self.turn_encoder.getAbsolutePosition()))
-        self.angle = state.angle.degrees()
+        current_state_relative_angle = (self.turn_encoder.getAbsolutePosition() - 90) % 360 
+        current_state_relative_angle -= 360 * (current_state_relative_angle > 180)
+        state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(current_state_relative_angle))
+        self.angle = (state.angle.degrees() + 90) % 360 - 360 * (state.angle.degrees() > 180)
+        self.speed = state.speed
+
+    def set_state_mps(self, state: kinematics.SwerveModuleState) -> None:
+        """
+        Sets the state of the module, with speed in m/s. Runs optimization to minimize heading change.
+        """
+        current_state_relative_angle = (self.turn_encoder.getAbsolutePosition() - 90) % 360 
+        current_state_relative_angle -= 360 * (current_state_relative_angle > 180)
+        state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(current_state_relative_angle))
+        self.angle = (state.angle.degrees() + 90) % 360 - 360 * (state.angle.degrees() > 180)
         self.speed_mps = state.speed
 
     def get_state(self) -> kinematics.SwerveModuleState:

@@ -14,12 +14,12 @@ class DriveTrain(SubsystemBase):
 
     rotation_offset: float
 
-    def __init__(self, rotation_offset: float = 0):
-        front_left = SwerveModuleConfig(3, 4, 9, Translation2d(0.339725, 0.288925), False, 0)
-        front_right = SwerveModuleConfig(6, 5, 10, Translation2d(0.339725, -0.288925), False, 0)
-        rear_left = SwerveModuleConfig(2, 1, 12, Translation2d(-0.339725, 0.288925), False, 0)
-        rear_right = SwerveModuleConfig(8, 7, 13, Translation2d(-0.339725, -0.288925), False, 0)
-        self._drive = SwerveDrive(front_left, front_right, rear_left, rear_right)
+    def __init__(self, rotation_offset: float = 0, deadband: float = 0):
+        front_left = SwerveModuleConfig(4, 3, 10, Translation2d(0.339725, 0.288925), False, 8.14)
+        front_right = SwerveModuleConfig(6, 5, 11, Translation2d(0.339725, -0.288925), True, 8.14)
+        rear_left = SwerveModuleConfig(2, 1, 9, Translation2d(-0.339725, 0.288925), False, 8.14)
+        rear_right = SwerveModuleConfig(8, 7, 12, Translation2d(-0.339725, -0.288925), True, 8.14)
+        self._drive = SwerveDrive(front_left, front_right, rear_left, rear_right, deadband)
 
         self.gyro = AHRS(SPI.Port.kMXP)
 
@@ -32,6 +32,9 @@ class DriveTrain(SubsystemBase):
             self._drive.drive(x, y, rot, self.gyro.getYaw() + self.rotation_offset)
         else:
             self._drive.drive(x, y, rot)
+
+    def reset(self) -> None:
+        self._drive.initialize()
 
     def brace(self) -> None:
         self._drive.brace()
