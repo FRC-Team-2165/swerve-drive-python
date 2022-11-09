@@ -16,12 +16,23 @@ from wpimath.geometry import Translation2d
 
 @dataclass
 class SwerveModuleConfig:
-    drive_motor_id: int 
+    drive_motor_id: int
+    "The CAN id of the drive motor"
     turn_motor_id: int
+    "The CAN id of the turn motor"
     turn_encoder_id: int
+    "The CAN id of the CANCoder"
     relative_position: Translation2d # offset from the center of the robot
+    "The position of the module, relative to the center of the robot."
     inverted: bool # Should the drive motor be inverted
+    "The inversion of the drive motor. Turn motor can't be inverted."
     gear_ratio: float # The gear ratio of the drive wheel, in falcon rotations per wheel rotation
+    """
+    The gear ratio of the drive wheel, in Falcon rotations per wheel rotation.I
+
+    If you only use the raw input methods, and not the speed-based ones (names containing "mps"),
+    this value doesn't need to be set.
+    """
 
 class SwerveModule:
     """
@@ -45,12 +56,16 @@ class SwerveModule:
     """
     drive_motor: FalconMotor
     turn_motor: FalconMotor
-    turn_encoder: ctre.CANCoder
+    turn_encoder: ctre.WPI_CANCoder
 
     gear_ratio: float
 
 
     def __init__(self, config: SwerveModuleConfig):
+        """
+        Creates the swerve module according the given configuration. See SwerveModuleConfig for 
+        more information on configuration options.
+        """
         self.drive_motor = FalconMotor(config.drive_motor_id)
         self.turn_motor = FalconMotor(config.turn_motor_id)
         self.turn_encoder = ctre.WPI_CANCoder(config.turn_encoder_id)
@@ -62,9 +77,18 @@ class SwerveModule:
     
     @property
     def inverted(self) -> bool:
+        """
+        Returns whether the drive motor is inverted. 
+        """
         return self.drive_motor.getInverted()
     @inverted.setter
     def inverted(self, inverted: bool) -> None:
+        """
+        Sets whether the drive motor is inverted.
+
+        This is initially set during configuration, and shouldn't need to be changed beyond that. 
+        However, this is here if you have the use case.
+        """
         self.drive_motor.setInverted(inverted) 
 
     def set_state(self, state: kinematics.SwerveModuleState) -> None:
@@ -128,5 +152,16 @@ class SwerveModule:
         """Sets the drive motor's speed, in meters per second"""
         self.speed = mps_to_falcon(speed, SWERVE_WHEEL_CIRCUMFERENCE, self.gear_ratio)
 
+    def closer_angle(self, angle1: float, angle2: float) -> float:
+        """
+        Returns the angle that is closer to the module's current angle.
 
+        This is most useful for angle optimization when the drive motor is not being used,
+        for example to brace the robot by setting the wheels in a certain position.
+        """
+        angle = self.angle
+        if abs(self.angle - angle1) < abs(self.angle - angle2):
+            return angle1
+        else:
+            return angle2
 
