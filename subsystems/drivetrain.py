@@ -16,8 +16,8 @@ class DriveTrain(SubsystemBase):
 
     def __init__(self, rotation_offset: float = 0, deadband: float = 0):
         front_left = SwerveModuleConfig(4, 3, 10, Translation2d(0.339725, 0.288925), False, 8.14)
-        front_right = SwerveModuleConfig(6, 5, 11, Translation2d(0.339725, -0.288925), True, 8.14)
-        rear_left = SwerveModuleConfig(2, 1, 9, Translation2d(-0.339725, 0.288925), False, 8.14)
+        front_right = SwerveModuleConfig(6, 5, 11, Translation2d(-0.339725, 0.288925), True, 8.14)
+        rear_left = SwerveModuleConfig(2, 1, 9, Translation2d(0.339725, -0.288925), False, 8.14)
         rear_right = SwerveModuleConfig(8, 7, 12, Translation2d(-0.339725, -0.288925), True, 8.14)
         self._drive = SwerveDrive(front_left, front_right, rear_left, rear_right, deadband)
 
