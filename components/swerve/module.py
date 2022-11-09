@@ -34,8 +34,8 @@ class SwerveModule:
     Assumptions:
     - CANCoder
         - measures the angle range from [-180, 180)
-        - measures negative angles as counterclockwise from 0, and positive for clockwise
-        - has been offset so that the 0 position refers to when the wheel faces forward
+        - has been offset so that the 0 position refers to when the wheel facing a quarter rotation right
+        - clockwise rotations increase angle, counterclockwise decrease
         - relative value set to absolute position on boot
     - Turning Motor
         - PID is controlled by a CANCoder using the "remote sensor" setup
@@ -71,20 +71,16 @@ class SwerveModule:
         """
         Sets the state of the module, with speed being from [-1, 1]. Runs optimization to minimize heading change.
         """
-        current_state_relative_angle = (self.turn_encoder.getAbsolutePosition() - 90) % 360 
-        current_state_relative_angle -= 360 * (current_state_relative_angle > 180)
-        state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(current_state_relative_angle))
-        self.angle = (state.angle.degrees() + 90) % 360 - 360 * (state.angle.degrees() > 180)
+        state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(self.angle))
+        self.angle = state.angle.degrees()
         self.speed = state.speed
 
     def set_state_mps(self, state: kinematics.SwerveModuleState) -> None:
         """
         Sets the state of the module, with speed in m/s. Runs optimization to minimize heading change.
         """
-        current_state_relative_angle = (self.turn_encoder.getAbsolutePosition() - 90) % 360 
-        current_state_relative_angle -= 360 * (current_state_relative_angle > 180)
-        state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(current_state_relative_angle))
-        self.angle = (state.angle.degrees() + 90) % 360 - 360 * (state.angle.degrees() > 180)
+        state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(self.angle))
+        self.angle = state.angle.degrees()
         self.speed_mps = state.speed
 
     def get_state(self) -> kinematics.SwerveModuleState:

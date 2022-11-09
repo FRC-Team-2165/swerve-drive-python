@@ -67,7 +67,7 @@ class SwerveDrive:
             return
         # Theoretically, a field-relative drive with a constant rotation of 0 should just be a "normal" drive,
         # eliminating the need to have a gyro in SwerveDrive itself, instead reserving it for the subsystem level
-        chassis_speeds = ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, -ySpeed, rot, Rotation2d.fromDegrees(current_angle))
+        chassis_speeds = ChassisSpeeds.fromFieldRelativeSpeeds(ySpeed, -xSpeed, rot, Rotation2d.fromDegrees(current_angle))
 
         module_states = self.kinematics.toSwerveModuleStates(chassis_speeds)
         m = module_states[0]
