@@ -13,11 +13,14 @@ class SwerveBot(wpilib.TimedRobot):
         self.controller = wpilib.XboxController(0)
     
     def teleopPeriodic(self) -> None:
-        if self.controller.getXButtonPressed():
+        if self.controller.getYButtonPressed():
             self.drive.reset()
+        elif self.controller.getXButtonPressed():
+            self.drive.brace()
+        elif self.controller.getBButtonPressed():
+            self.drive.drive(0, 0, 0.25)
         
-        #self.drive.drive(self.controller.getLeftX(), -self.controller.getLeftY(), self.controller.getRightX(), False)
-        self.drive.drive(0, 0, -0.25)
+        self.drive.drive(self.controller.getLeftX(), -self.controller.getLeftY(), self.controller.getRightX(), True)
 
 if __name__ == "__main__":
     wpilib.run(SwerveBot)
