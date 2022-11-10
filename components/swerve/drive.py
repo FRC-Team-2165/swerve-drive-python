@@ -73,7 +73,7 @@ class SwerveDrive:
         """
         Puts the swerve module wheels facing parallel to the orientation of the robot.
 
-        Optimizes the module angles to minimize wheel movement.
+        Optimizes the module angles to minimize wheel movement. Cancelled by any other drive call.
         """
         for m in self.modules:
             m.angle = m.closer_angle(90, -90)
