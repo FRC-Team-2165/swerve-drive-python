@@ -59,6 +59,8 @@ class SwerveDrive:
         ySpeed = applyDeadband(ySpeed, self.deadband)
         rot = applyDeadband(rot, self.deadband)
         if xSpeed == 0 and ySpeed == 0 and rot == 0:
+            for m in self.modules:
+                m.speed = 0
             return
         # A field-relative drive with a constant rotation of 0 is just be a "normal" drive, eliminating 
         # the need to have a gyro in SwerveDrive itself, instead reserving it for the subsystem level
@@ -97,3 +99,7 @@ class SwerveDrive:
 
         self.rear_right.angle = self.rear_right.closer_angle(45, -135)
         self.rear_right.speed = 0
+
+    def stopMotor(self) -> None:
+        for m in self.modules:
+            m.stopMotor()

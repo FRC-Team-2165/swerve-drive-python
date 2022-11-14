@@ -141,6 +141,10 @@ class SwerveModule:
         if(abs(speed) > 1):
             speed /= abs(speed) # cap, while retaining sign
         self.drive_motor.set(speed)
+
+    def stopMotor(self) -> None:
+        self.drive_motor.stopMotor()
+        self.turn_motor.stopMotor()
     
     @property
     def speed_mps(self) -> float:
