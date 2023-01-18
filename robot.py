@@ -20,7 +20,11 @@ class SwerveBot(wpilib.TimedRobot):
         elif self.controller.getBButtonPressed():
             self.drive.drive(0, 0, 0.25)
         
-        self.drive.drive(self.controller.getLeftX(), -self.controller.getLeftY(), self.controller.getRightX(), True)
+        self.drive.drive(self.controller.getLeftX(), 
+                         -self.controller.getLeftY(), 
+                         self.controller.getRightX(), 
+                         field_relative = True,
+                         ramp_rate = 0.05)
 
 if __name__ == "__main__":
     wpilib.run(SwerveBot)

@@ -8,6 +8,11 @@ from wpimath.geometry import Rotation2d
 
 from wpimath import applyDeadband
 
+def _sign(n: float) -> int:
+    if n == 0:
+        return 0
+    return round(n / abs(n))
+
 class SwerveDrive:
     front_left: SwerveModule
     front_right: SwerveModule
@@ -15,6 +20,8 @@ class SwerveDrive:
     rear_right: SwerveModule
 
     kinematics: SwerveDrive4Kinematics
+
+    previous_speeds: tuple[float, float]
 
 
     def __init__(self, front_left_cfg: SwerveModuleConfig,
@@ -30,13 +37,14 @@ class SwerveDrive:
         self.modules = [self.front_left, self.front_right, self.rear_left, self.rear_right]
 
         self.deadband = deadband
+        self.previous_speeds = (0, 0)
 
         self.kinematics = SwerveDrive4Kinematics(front_left_cfg.relative_position, 
                                                  front_right_cfg.relative_position, 
                                                  rear_left_cfg.relative_position, 
                                                  rear_right_cfg.relative_position)
     
-    def drive(self, xSpeed: float, ySpeed: float, rot: float, current_angle: float = 0) -> None:
+    def drive(self, xSpeed: float, ySpeed: float, rot: float, current_angle: float = 0, ramp_rate: float = 1) -> None:
         """
         Moves the drivetrain according to the inputs from the cartesian inputs. This method is 
         designed to easily take inputs from a controller. As such, inputs are expected to be 
@@ -62,6 +70,19 @@ class SwerveDrive:
             for m in self.modules:
                 m.speed = 0
             return
+
+        prevx, prevy = self.previous_speeds
+        if prevx != 0 and xSpeed != 0 and _sign(xSpeed) != _sign(prevx):
+            xSpeed = 0
+        else:
+            xSpeed = prevx + ramp_rate * (xSpeed - prevx)
+
+        if prevy != 0 and ySpeed != 0 and _sign(ySpeed) != _sign(prevy):
+            ySpeed = 0
+        else:
+            ySpeed = prevy + ramp_rate * (ySpeed - prevy)
+        
+        self.previous_speeds = (xSpeed, ySpeed)
         # A field-relative drive with a constant rotation of 0 is just be a "normal" drive, eliminating 
         # the need to have a gyro in SwerveDrive itself, instead reserving it for the subsystem level
         chassis_speeds = ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, -ySpeed, -rot, Rotation2d.fromDegrees(current_angle))

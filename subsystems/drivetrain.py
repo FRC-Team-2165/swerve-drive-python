@@ -4,13 +4,16 @@ from wpimath.geometry import Translation2d
 from commands2 import SubsystemBase
 from wpilib import SPI
 
-
 from navx import AHRS 
+
+
 
 class DriveTrain(SubsystemBase):
 
     _drive: SwerveDrive
     gyro: AHRS
+
+    prev: tuple[float, float]
 
     rotation_offset: float
 
@@ -25,13 +28,14 @@ class DriveTrain(SubsystemBase):
 
         self.rotation_offset = rotation_offset
 
+
         super().__init__()
 
-    def drive(self, x: float, y:float, rot: float, field_relative: bool = False):
+    def drive(self, x: float, y:float, rot: float, field_relative: bool = False, ramp_rate: float = 1):
         if field_relative:
-            self._drive.drive(x, y, rot, self.gyro.getYaw() + self.rotation_offset)
+            self._drive.drive(x, y, rot, self.gyro.getYaw() + self.rotation_offset, ramp_rate=ramp_rate)
         else:
-            self._drive.drive(x, y, rot)
+            self._drive.drive(x, y, rot, ramp_rate=ramp_rate)
 
     def reset(self) -> None:
         self._drive.initialize()
