@@ -1,17 +1,40 @@
 from components.swerve.module import SwerveModule
 from components.swerve.module import SwerveModuleConfig
 
-from typing import Tuple
-
 from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds
 from wpimath.geometry import Rotation2d
 
 from wpimath import applyDeadband
 
+from wpilib import SmartDashboard as sd
+
+import math
+
 def _sign(n: float) -> int:
     if n == 0:
         return 0
     return round(n / abs(n))
+
+def _cartesian_to_polar(point: tuple[float, float]) -> tuple[float, float]:
+    x, y = point
+    r = math.sqrt(x**2 + y**2)
+    if x == 0:
+        theta = math.atan(math.inf)
+    else:
+        theta = math.atan(y/x) * 180/math.pi
+    if x < 0:
+        theta += 180
+    elif y < 0:
+        theta += 360
+    return r, theta
+
+def _polar_to_cartesian(point: tuple[float, float]) -> tuple[float, float]:
+    r, theta = point
+    theta *= math.pi/180
+    x = r * math.cos(theta)
+    y = r * math.sin(theta)
+    return x, y
+    
 
 class SwerveDrive:
     front_left: SwerveModule
@@ -21,7 +44,7 @@ class SwerveDrive:
 
     kinematics: SwerveDrive4Kinematics
 
-    previous_speeds: tuple[float, float]
+    previous_speed: tuple[float, float] # polar
 
 
     def __init__(self, front_left_cfg: SwerveModuleConfig,
@@ -37,7 +60,7 @@ class SwerveDrive:
         self.modules = [self.front_left, self.front_right, self.rear_left, self.rear_right]
 
         self.deadband = deadband
-        self.previous_speeds = (0, 0)
+        self.previous_speed = (0, 0)
 
         self.kinematics = SwerveDrive4Kinematics(front_left_cfg.relative_position, 
                                                  front_right_cfg.relative_position, 
@@ -52,7 +75,7 @@ class SwerveDrive:
 
         The expected movement is as follows:
         - +x: right, -x: left
-        - +y: forward, -x: reverse
+        - +y: forward, -y: reverse
         - +rot: CW, -rot: CCW
 
 
@@ -71,18 +94,20 @@ class SwerveDrive:
                 m.speed = 0
             return
 
-        prevx, prevy = self.previous_speeds
-        if prevx != 0 and xSpeed != 0 and _sign(xSpeed) != _sign(prevx):
-            xSpeed = 0
-        else:
-            xSpeed = prevx + ramp_rate * (xSpeed - prevx)
+        # sd.putNumber("X original", xSpeed)
+        # sd.putNumber("Y original", ySpeed)
+        # # r, theta = _cartesian_to_polar((xSpeed, ySpeed))
+        # # # if abs(theta - self.previous_speed[1]) > 90:
+        # # #     # if the speed is suddenly reversed
+        # # #     r = 0    
+        # # # else:
+        # # #     r = self.previous_speed[0] + ramp_rate * (r - self.previous_speed[0])
+        # # xSpeed, ySpeed = _polar_to_cartesian((r, theta))
+        # sd.putNumber("X post", xSpeed)
+        # sd.putNumber("Y post", ySpeed)
+        # # self.previous_speed = (r, theta)
 
-        if prevy != 0 and ySpeed != 0 and _sign(ySpeed) != _sign(prevy):
-            ySpeed = 0
-        else:
-            ySpeed = prevy + ramp_rate * (ySpeed - prevy)
         
-        self.previous_speeds = (xSpeed, ySpeed)
         # A field-relative drive with a constant rotation of 0 is just be a "normal" drive, eliminating 
         # the need to have a gyro in SwerveDrive itself, instead reserving it for the subsystem level
         chassis_speeds = ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, -ySpeed, -rot, Rotation2d.fromDegrees(current_angle))

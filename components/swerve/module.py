@@ -1,7 +1,6 @@
 import math
 
 import wpimath.kinematics as kinematics
-from wpimath.controller import PIDController
 from wpimath.geometry import Rotation2d
 
 import ctre
