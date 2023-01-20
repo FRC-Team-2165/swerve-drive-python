@@ -44,7 +44,7 @@ class SwerveDrive:
 
     kinematics: SwerveDrive4Kinematics
 
-    previous_speed: tuple[float, float] # polar
+    previous_speed: float
 
 
     def __init__(self, front_left_cfg: SwerveModuleConfig,
@@ -89,23 +89,30 @@ class SwerveDrive:
         xSpeed = applyDeadband(xSpeed, self.deadband)
         ySpeed = applyDeadband(ySpeed, self.deadband)
         rot = applyDeadband(rot, self.deadband)
-        if xSpeed == 0 and ySpeed == 0 and rot == 0:
-            for m in self.modules:
-                m.speed = 0
-            return
+        # if xSpeed == 0 and ySpeed == 0 and rot == 0:
+        #     for m in self.modules:
+        #         m.speed = 0
+        #     return
 
-        # sd.putNumber("X original", xSpeed)
-        # sd.putNumber("Y original", ySpeed)
-        # # r, theta = _cartesian_to_polar((xSpeed, ySpeed))
-        # # # if abs(theta - self.previous_speed[1]) > 90:
-        # # #     # if the speed is suddenly reversed
-        # # #     r = 0    
-        # # # else:
-        # # #     r = self.previous_speed[0] + ramp_rate * (r - self.previous_speed[0])
-        # # xSpeed, ySpeed = _polar_to_cartesian((r, theta))
-        # sd.putNumber("X post", xSpeed)
-        # sd.putNumber("Y post", ySpeed)
-        # # self.previous_speed = (r, theta)
+        # prev_magnitude = math.sqrt(self.previous_speed[0]**2 + self.previous_speed[1]**2)
+        # prev_magnitude = min(prev_magnitude, 1)
+
+        # magnitude = math.sqrt(xSpeed**2 + ySpeed**2)
+        # magnitude = min(magnitude, 1)
+
+        
+
+        # rate = prev_magnitude + ramp_rate * (magnitude - prev_magnitude)
+        # rate = min(rate, 1)
+
+        # sd.putNumber("Ramp rate", rate)
+        # sd.putNumber("Previous magnitude", prev_magnitude)
+        # sd.putNumber("Magnitude", magnitude)
+
+        # xSpeed *= rate
+        # ySpeed *= rate
+
+        # self.previous_speed = (xSpeed, ySpeed)
 
         
         # A field-relative drive with a constant rotation of 0 is just be a "normal" drive, eliminating 
