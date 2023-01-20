@@ -1,17 +1,17 @@
 import math
 
 import wpimath.kinematics as kinematics
-from wpimath.geometry import Rotation2d
+from wpimath.geometry import Rotation2d, Translation2d
 
 import ctre
 
 from components.swerve.falcon_helper import *
+from components.swerve.polar import Polar
 
 SWERVE_WHEEL_RADIUS = 0.0508 # meters
 SWERVE_WHEEL_CIRCUMFERENCE = 2 * math.pi * SWERVE_WHEEL_RADIUS 
 
 from dataclasses import dataclass
-from wpimath.geometry import Translation2d
 
 @dataclass
 class SwerveModuleConfig:
@@ -27,7 +27,7 @@ class SwerveModuleConfig:
     "The inversion of the drive motor. Turn motor can't be inverted."
     gear_ratio: float # The gear ratio of the drive wheel, in falcon rotations per wheel rotation
     """
-    The gear ratio of the drive wheel, in Falcon rotations per wheel rotation.I
+    The gear ratio of the drive wheel, in Falcon rotations per wheel rotation.
 
     If you only use the raw input methods, and not the speed-based ones (names containing "mps"),
     this value doesn't need to be set.
@@ -57,7 +57,10 @@ class SwerveModule:
     turn_motor: FalconMotor
     turn_encoder: ctre.WPI_CANCoder
 
+    relative_position: Translation2d
+
     gear_ratio: float
+
 
 
     def __init__(self, config: SwerveModuleConfig):
@@ -70,6 +73,8 @@ class SwerveModule:
         self.turn_encoder = ctre.WPI_CANCoder(config.turn_encoder_id)
 
         self.drive_motor.setInverted(config.inverted)
+
+        self.relative_position = config.relative_position
 
         self.gear_ratio = config.gear_ratio
         
@@ -90,27 +95,27 @@ class SwerveModule:
         """
         self.drive_motor.setInverted(inverted) 
 
-    def set_state(self, state: kinematics.SwerveModuleState) -> None:
+    def set_state(self, state: Polar) -> None:
         """
         Sets the state of the module, with speed being from [-1, 1]. Runs optimization to minimize heading change.
         """
-        state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(self.angle))
-        self.angle = state.angle.degrees()
-        self.speed = state.speed
+        state = self._optimize(state)
+        self.angle = state.theta
+        self.speed = state.magnitude
 
-    def set_state_mps(self, state: kinematics.SwerveModuleState) -> None:
-        """
-        Sets the state of the module, with speed in m/s. Runs optimization to minimize heading change.
-        """
-        state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(self.angle))
-        self.angle = state.angle.degrees()
-        self.speed_mps = state.speed
+    # def set_state_mps(self, state: kinematics.SwerveModuleState) -> None:
+    #     """
+    #     Sets the state of the module, with speed in m/s. Runs optimization to minimize heading change.
+    #     """
+    #     state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(self.angle))
+    #     self.angle = state.angle.degrees()
+    #     self.speed_mps = state.speed
 
     def get_state(self) -> kinematics.SwerveModuleState:
         """
         Returns a representation of the current state of the module.
         """
-        return kinematics.SwerveModuleState(self.speed_mps, self.angle)
+        return kinematics.SwerveModuleState(self.speed, self.angle)
 
     @property
     def angle(self) -> float:
@@ -145,26 +150,41 @@ class SwerveModule:
         self.drive_motor.stopMotor()
         self.turn_motor.stopMotor()
     
-    @property
-    def speed_mps(self) -> float:
-        """Returns the drive motor's approximate speed, in meters per second."""
-        return falcon_to_mps(self.speed, SWERVE_WHEEL_CIRCUMFERENCE, self.gear_ratio)
+    # @property
+    # def speed_mps(self) -> float:
+    #     """Returns the drive motor's approximate speed, in meters per second."""
+    #     return falcon_to_mps(self.speed, SWERVE_WHEEL_CIRCUMFERENCE, self.gear_ratio)
 
-    @speed_mps.setter
-    def speed_mps(self, speed: float) -> None:
-        """Sets the drive motor's speed, in meters per second"""
-        self.speed = mps_to_falcon(speed, SWERVE_WHEEL_CIRCUMFERENCE, self.gear_ratio)
+    # @speed_mps.setter
+    # def speed_mps(self, speed: float) -> None:
+    #     """Sets the drive motor's speed, in meters per second"""
+    #     self.speed = mps_to_falcon(speed, SWERVE_WHEEL_CIRCUMFERENCE, self.gear_ratio)
 
-    def closer_angle(self, angle1: float, angle2: float) -> float:
+    def rotation_angle(self) -> float:
+        base = self.relative_position.angle().degrees() + 90
+        return base
+        # return self._closer_angle(base, (base + 180)%360)
+    
+    def offset_from_center(self) -> float:
+        return math.sqrt(self.relative_position.X()**2 + self.relative_position.Y()**2)
+
+    def _closer_angle(self, angle1: float, angle2: float) -> float:
         """
         Returns the angle that is closer to the module's current angle.
 
         This is most useful for angle optimization when the drive motor is not being used,
         for example to brace the robot by setting the wheels in a certain position.
         """
-        angle = self.angle
         if abs(self.angle - angle1) < abs(self.angle - angle2):
             return angle1
         else:
             return angle2
+
+    def _optimize(self, state: Polar) -> Polar:
+        angle = state.theta % 360 # force into [0, 360)
+        a = self._closer_angle(angle, (angle + 180)%360)
+        speed = state.magnitude
+        if a != angle:
+            speed = -speed
+        return Polar(speed, a)
 

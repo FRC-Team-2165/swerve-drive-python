@@ -6,6 +6,8 @@ from wpilib import SPI
 
 from navx import AHRS 
 
+from wpilib import SmartDashboard as sd
+
 
 
 class DriveTrain(SubsystemBase):
@@ -30,12 +32,14 @@ class DriveTrain(SubsystemBase):
 
 
         super().__init__()
+        self.gyro.reset()
 
-    def drive(self, x: float, y:float, rot: float, field_relative: bool = False, ramp_rate: float = 1):
+    def drive(self, x: float, y:float, rot: float, field_relative: bool = False, square_inputs: bool = False, ramp_rate: float = 1):
         if field_relative:
-            self._drive.drive(x, y, rot, self.gyro.getYaw() + self.rotation_offset, ramp_rate=ramp_rate)
+            sd.putNumber("Gyro angle", self.gyro.getYaw())
+            self._drive.drive(x, y, rot, self.gyro.getYaw() + self.rotation_offset, square_inputs=square_inputs, ramp_rate=ramp_rate)
         else:
-            self._drive.drive(x, y, rot, ramp_rate=ramp_rate)
+            self._drive.drive(x, y, rot, ramp_rate=ramp_rate, square_inputs=square_inputs)
 
     def reset(self) -> None:
         self._drive.initialize()
