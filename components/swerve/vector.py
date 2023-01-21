@@ -18,7 +18,7 @@ class Polar:
         return self
 
     def __add__(self, vec: "Polar") -> "Polar":
-        return self.to_cartesian() + vec.to_cartesian()
+        return (self.to_cartesian() + vec.to_cartesian()).to_polar()
 
 @dataclass
 class Cartesian:
