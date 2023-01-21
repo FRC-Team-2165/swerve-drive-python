@@ -6,7 +6,7 @@ from wpimath.geometry import Rotation2d, Translation2d
 import ctre
 
 from components.swerve.falcon_helper import *
-from components.swerve.polar import Polar
+from components.swerve.vector import Polar
 
 SWERVE_WHEEL_RADIUS = 0.0508 # meters
 SWERVE_WHEEL_CIRCUMFERENCE = 2 * math.pi * SWERVE_WHEEL_RADIUS 

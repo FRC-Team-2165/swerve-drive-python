@@ -1,9 +1,5 @@
 from components.swerve.module import SwerveModule, SwerveModuleConfig
-from components.swerve.polar import Polar
-
-
-from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds
-from wpimath.geometry import Rotation2d
+from components.swerve.vector import Polar, Cartesian
 
 from wpimath import applyDeadband
 
@@ -17,8 +13,8 @@ def _sign(n: float) -> int:
     return round(n / abs(n))
 
 
-def _cartesian_to_polar(point: tuple[float, float]) -> Polar:
-    x, y = point
+def _cartesian_to_polar(point: Cartesian) -> Polar:
+    x, y = point.x, point.y
     r = math.sqrt(x**2 + y**2)
     if x == 0:
         if y > 0:
@@ -35,7 +31,7 @@ def _cartesian_to_polar(point: tuple[float, float]) -> Polar:
         theta += 360
     return Polar(r, theta)
 
-def _polar_to_cartesian(point: tuple[float, float]) -> tuple[float, float]:
+def _polar_to_cartesian(point: Polar) -> Cartesian:
     r, theta = point
     theta *= math.pi/180
     x = r * math.cos(theta)
@@ -48,8 +44,6 @@ class SwerveDrive:
     front_right: SwerveModule
     rear_left: SwerveModule
     rear_right: SwerveModule
-
-    kinematics: SwerveDrive4Kinematics
 
     previous_speed: float
 
@@ -69,10 +63,6 @@ class SwerveDrive:
         self.deadband = deadband
         self.previous_speed = (0, 0)
 
-        # self.kinematics = SwerveDrive4Kinematics(front_left_cfg.relative_position, 
-        #                                          front_right_cfg.relative_position, 
-        #                                          rear_left_cfg.relative_position, 
-        #                                          rear_right_cfg.relative_position)
     
     def drive(self, xSpeed: float, ySpeed: float, rot: float, current_angle: float = 0, square_inputs: bool = False, ramp_rate: float = 1) -> None:
         """
@@ -119,7 +109,7 @@ class SwerveDrive:
         # module_states = self.kinematics.toSwerveModuleStates(chassis_speeds)
 
         # Convert cartesian vector input to polar vector. Makes all of the math *much* simpler.
-        target_vector = _cartesian_to_polar((xSpeed, -ySpeed))
+        target_vector = Cartesian(xSpeed, -ySpeed).to_polar()
         sd.putNumber("Target angle", target_vector.theta)
         sd.putNumber("Target Speed", target_vector.magnitude)
         # adjust target_vector angle by the current heading
@@ -136,17 +126,22 @@ class SwerveDrive:
             if rot > 0: 
                 rotation_angle = (rotation_angle + 180) % 360
             rotation_speed = abs(rot) * (m.offset_from_center() / max_module_distance)
-            combined_magnitude = abs(rot) + target_vector.magnitude
-            if combined_magnitude == 0:
-                rotation_weight = 0
-                target_weight = 0
-            else:
-                rotation_weight = abs(rot) / combined_magnitude
-                target_weight = target_vector.magnitude / combined_magnitude
+            rotation = Polar(rotation_speed, rotation_angle)
 
-            module_angle = target_vector.theta * target_weight + rotation_angle * rotation_weight
-            module_speed = target_vector.magnitude * target_weight + rotation_speed * rotation_weight
-            module_states.append(Polar(module_speed, module_angle))
+            module_states.append(target_vector + rotation)
+
+
+            # combined_magnitude = abs(rot) + target_vector.magnitude
+            # if combined_magnitude == 0:
+            #     rotation_weight = 0
+            #     target_weight = 0
+            # else:
+            #     rotation_weight = abs(rot) / combined_magnitude
+            #     target_weight = target_vector.magnitude / combined_magnitude
+
+            # module_angle = target_vector.theta * target_weight + rotation_angle * rotation_weight
+            # module_speed = target_vector.magnitude * target_weight + rotation_speed * rotation_weight
+            # module_states.append(Polar(module_speed, module_angle))
 
 
         # # Convert SwerveModuleState to something useful
@@ -155,7 +150,8 @@ class SwerveDrive:
         # Desaturate module speeds. May not be necessary?
         top_speed = max(m.magnitude for m in module_states)
         if top_speed > 1:
-            module_states = [Polar(m.magnitude/top_speed, m.theta) for m in module_states]
+            for m in module_states:
+                m.magnitude /= top_speed
  
         for i, s in enumerate(module_states):
             sd.putNumber("Module {} speed".format(i), s.magnitude)
