@@ -147,7 +147,7 @@ class SwerveDrive:
         # # Convert SwerveModuleState to something useful
         # module_states = [(m.angle, m.speed) for m in module_states]
 
-        # Desaturate module speeds. May not be necessary?
+        # Desaturate module speeds. Very necessary.
         top_speed = max(m.magnitude for m in module_states)
         if top_speed > 1:
             for m in module_states:
@@ -157,6 +157,7 @@ class SwerveDrive:
             sd.putNumber("Module {} speed".format(i), s.magnitude)
             sd.putNumber("Module {} angle".format(i), s.theta)
             if s.magnitude == 0:
+                # only stop the drive motors, but don't reset the angle
                 self.modules[i].speed = 0
             else:
                 self.modules[i].set_state(s)
