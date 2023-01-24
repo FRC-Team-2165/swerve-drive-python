@@ -28,7 +28,7 @@ class SwerveBot(wpilib.TimedRobot):
                          self.controller.getRightX(), 
                          field_relative = True,
                          ramp_rate = 0.01,
-                         square_inputs = True)
+                         square_inputs = False)
 
 if __name__ == "__main__":
     wpilib.run(SwerveBot)
