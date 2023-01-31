@@ -1,6 +1,5 @@
 import math
 
-import wpimath.kinematics as kinematics
 from wpimath.geometry import Rotation2d, Translation2d
 
 import ctre
@@ -60,6 +59,7 @@ class SwerveModule:
     relative_position: Translation2d
 
     gear_ratio: float
+    
 
 
 
@@ -85,6 +85,7 @@ class SwerveModule:
         Returns whether the drive motor is inverted. 
         """
         return self.drive_motor.getInverted()
+
     @inverted.setter
     def inverted(self, inverted: bool) -> None:
         """
@@ -111,11 +112,11 @@ class SwerveModule:
     #     self.angle = state.angle.degrees()
     #     self.speed_mps = state.speed
 
-    def get_state(self) -> kinematics.SwerveModuleState:
+    def get_state(self) -> Polar:
         """
         Returns a representation of the current state of the module.
         """
-        return kinematics.SwerveModuleState(self.speed, self.angle)
+        return Polar(self.speed, self._angle())
 
     @property
     def angle(self) -> float:
@@ -124,16 +125,13 @@ class SwerveModule:
 
     @angle.setter
     def angle(self, angle: float) -> None:
-        """Sets the current angle in degrees. Values outside the range [-180, 180) will be normalized in that range."""
-        angle = (angle + 180) % 360 - 180
+        """Sets the current angle in degrees. Values outside the range [0, 360) will be normalized."""
+        angle = self._optimize_angle(angle)
         self.turn_motor.set(ctre.ControlMode.Position, degrees_to_CANCoder(angle))
-        # if (abs(angle - self.angle) <= delta):
-        #     self.turn_motor.set(0)
-        # if angle > self.angle:
-        #     self.turn_motor.set(-0.8)
-        # elif angle < self.angle:
-        #     self.turn_motor.set(0.8)
-            
+
+    def _angle(self) -> float:
+        return self.turn_encoder.getPosition()
+
     @property
     def speed(self) -> float:
         """Returns a value in the range [-1, 1] representing the drive motor's approximate speed."""
@@ -168,23 +166,29 @@ class SwerveModule:
     def offset_from_center(self) -> float:
         return math.sqrt(self.relative_position.X()**2 + self.relative_position.Y()**2)
 
-    def _closer_angle(self, angle1: float, angle2: float) -> float:
-        """
-        Returns the angle that is closer to the module's current angle.
+    # def _closer_angle(self, angle1: float, angle2: float) -> float:
+    #     """
+    #     Returns the angle that is closer to the module's current angle.
 
-        This is most useful for angle optimization when the drive motor is not being used,
-        for example to brace the robot by setting the wheels in a certain position.
-        """
-        if abs(self.angle - angle1) < abs(self.angle - angle2):
-            return angle1
-        else:
-            return angle2
+    #     This is most useful for angle optimization when the drive motor is not being used,
+    #     for example to brace the robot by setting the wheels in a certain position.
+    #     """
+    #     if abs(self.angle - angle1) < abs(self.angle - angle2):
+    #         return angle1
+    #     else:
+    #         return angle2
+
+    def _optimize_angle(self, angle: float) -> float:
+        offset = self._angle() // 360
+        angle = angle % 360 + offset * 360 # set angle in the same degree as the current rotation
+        target_angles = (angle + n * 180 for n in range(-2, 3)) # test every reasonable offset from current position
+        return min(target_angles, key = lambda a: abs(self._angle() - a))
+        
 
     def _optimize(self, state: Polar) -> Polar:
-        angle = state.theta % 360 # force into [0, 360)
-        a = self._closer_angle(angle, (angle + 180)%360)
+        a = self._optimize_angle(state.theta)
         speed = state.magnitude
-        if a != angle:
+        if a % 360 != state.theta % 360:
             speed = -speed
         return Polar(speed, a)
 

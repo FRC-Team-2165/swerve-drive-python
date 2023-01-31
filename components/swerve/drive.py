@@ -7,36 +7,6 @@ from wpilib import SmartDashboard as sd
 
 import math
 
-def _sign(n: float) -> int:
-    if n == 0:
-        return 0
-    return round(n / abs(n))
-
-
-def _cartesian_to_polar(point: Cartesian) -> Polar:
-    x, y = point.x, point.y
-    r = math.sqrt(x**2 + y**2)
-    if x == 0:
-        if y > 0:
-            return Polar(y, 90)
-        elif y < 0:
-            return Polar(-y, 270)
-        else:
-            return Polar(0, 0)
-    else:
-        theta = math.atan(y/x) * 180/math.pi
-    if x < 0:
-        theta += 180
-    elif y < 0:
-        theta += 360
-    return Polar(r, theta)
-
-def _polar_to_cartesian(point: Polar) -> Cartesian:
-    r, theta = point
-    theta *= math.pi/180
-    x = r * math.cos(theta)
-    y = r * math.sin(theta)
-    return x, y
     
 
 class SwerveDrive:
@@ -64,7 +34,7 @@ class SwerveDrive:
         self.previous_speed = (0, 0)
 
     
-    def drive(self, xSpeed: float, ySpeed: float, rot: float, current_angle: float = 0, square_inputs: bool = False, ramp_rate: float = 1) -> None:
+    def drive(self, xSpeed: float, ySpeed: float, rot: float, current_angle: float = 0, square_inputs: bool = False) -> None:
         """
         Moves the drivetrain according to the inputs from the cartesian inputs. This method is 
         designed to easily take inputs from a controller. As such, inputs are expected to be 
@@ -83,8 +53,6 @@ class SwerveDrive:
 
         Inputs are trimmed by the deadband value passed to the SwerveDrive constructor.
         """
-        sd.putNumber("rot (raw)", rot)
-
         if square_inputs:
             xSpeed *= abs(xSpeed)
             ySpeed *= abs(ySpeed)
@@ -94,7 +62,6 @@ class SwerveDrive:
         ySpeed = applyDeadband(ySpeed, self.deadband)
         rot = applyDeadband(rot, self.deadband)
 
-        sd.putNumber("rot (post-deadband)", rot)
         # if xSpeed == 0 and ySpeed == 0 and rot == 0:
         #     for m in self.modules:
         #         m.speed = 0
@@ -110,10 +77,6 @@ class SwerveDrive:
 
         # Convert cartesian vector input to polar vector. Makes all of the math *much* simpler.
         target_vector = Cartesian(xSpeed, -ySpeed).to_polar()
-        sd.putNumber("Target angle", target_vector.theta)
-        sd.putNumber("Target Speed", target_vector.magnitude)
-        # adjust target_vector angle by the current heading
-        sd.putNumber("Current angle", current_angle)
         target_vector.theta -= current_angle
 
         max_module_distance = max(m.offset_from_center() for m in self.modules)
@@ -130,33 +93,16 @@ class SwerveDrive:
 
             module_states.append(target_vector + rotation)
 
-
-            # combined_magnitude = abs(rot) + target_vector.magnitude
-            # if combined_magnitude == 0:
-            #     rotation_weight = 0
-            #     target_weight = 0
-            # else:
-            #     rotation_weight = abs(rot) / combined_magnitude
-            #     target_weight = target_vector.magnitude / combined_magnitude
-
-            # module_angle = target_vector.theta * target_weight + rotation_angle * rotation_weight
-            # module_speed = target_vector.magnitude * target_weight + rotation_speed * rotation_weight
-            # module_states.append(Polar(module_speed, module_angle))
-
-
-        # # Convert SwerveModuleState to something useful
-        # module_states = [(m.angle, m.speed) for m in module_states]
-
-        # Desaturate module speeds. May not be necessary?
+        # Desaturate module speeds. Very necessary.
         top_speed = max(m.magnitude for m in module_states)
         if top_speed > 1:
             for m in module_states:
                 m.magnitude /= top_speed
- 
+
+
         for i, s in enumerate(module_states):
-            sd.putNumber("Module {} speed".format(i), s.magnitude)
-            sd.putNumber("Module {} angle".format(i), s.theta)
             if s.magnitude == 0:
+                # only stop the drive motors, but don't reset the angle
                 self.modules[i].speed = 0
             else:
                 self.modules[i].set_state(s)
