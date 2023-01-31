@@ -34,12 +34,11 @@ class DriveTrain(SubsystemBase):
         super().__init__()
         self.gyro.reset()
 
-    def drive(self, x: float, y:float, rot: float, field_relative: bool = False, square_inputs: bool = False, ramp_rate: float = 1):
+    def drive(self, x: float, y:float, rot: float, field_relative: bool = False, square_inputs: bool = False):
         if field_relative:
-            sd.putNumber("Gyro angle", self.gyro.getYaw())
-            self._drive.drive(x, y, rot, self.gyro.getYaw() + self.rotation_offset, square_inputs=square_inputs, ramp_rate=ramp_rate)
+            self._drive.drive(x, y, rot, self.gyro.getYaw() + self.rotation_offset, square_inputs=square_inputs)
         else:
-            self._drive.drive(x, y, rot, ramp_rate=ramp_rate, square_inputs=square_inputs)
+            self._drive.drive(x, y, rot, square_inputs=square_inputs)
 
     def reset(self) -> None:
         self._drive.initialize()
