@@ -3,6 +3,7 @@ import math
 from wpimath.geometry import Rotation2d, Translation2d
 
 import ctre
+import rev
 
 from components.swerve.falcon_helper import *
 from components.swerve.vector import Polar
@@ -52,7 +53,7 @@ class SwerveModule:
         - set to "Brake" for neutral input (this is optional for drive motor, but recommended).
     - PIDF values have been set in the motors themselves
     """
-    drive_motor: FalconMotor
+    drive_motor: rev.CANSparkMax
     turn_motor: FalconMotor
     turn_encoder: ctre.WPI_CANCoder
 
@@ -68,7 +69,7 @@ class SwerveModule:
         Creates the swerve module according the given configuration. See SwerveModuleConfig for 
         more information on configuration options.
         """
-        self.drive_motor = FalconMotor(config.drive_motor_id)
+        self.drive_motor = rev.CANSparkMax(config.drive_motor_id, rev.CANSparkMax.MotorType.kBrushless)
         self.turn_motor = FalconMotor(config.turn_motor_id)
         self.turn_encoder = ctre.WPI_CANCoder(config.turn_encoder_id)
 
