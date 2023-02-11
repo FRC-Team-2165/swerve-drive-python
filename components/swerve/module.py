@@ -27,7 +27,7 @@ class SwerveModuleConfig:
     "The inversion of the drive motor. Turn motor can't be inverted."
     gear_ratio: float # The gear ratio of the drive wheel, in falcon rotations per wheel rotation
     """
-    The gear ratio of the drive wheel, in Falcon rotations per wheel rotation.
+    The gear ratio of the drive wheel, in motor rotations per wheel rotation.
 
     If you only use the raw input methods, and not the speed-based ones (names containing "mps"),
     this value doesn't need to be set.
@@ -54,6 +54,7 @@ class SwerveModule:
     - PIDF values have been set in the motors themselves
     """
     drive_motor: rev.CANSparkMax
+    drive_encoder: rev.SparkMaxRelativeEncoder
     turn_motor: FalconMotor
     turn_encoder: ctre.WPI_CANCoder
 
@@ -70,6 +71,9 @@ class SwerveModule:
         more information on configuration options.
         """
         self.drive_motor = rev.CANSparkMax(config.drive_motor_id, rev.CANSparkMax.MotorType.kBrushless)
+        self.drive_encoder = self.drive_motor.getEncoder()
+        self.drive_encoder.setVelocityConversionFactor(SWERVE_WHEEL_CIRCUMFERENCE / config.gear_ratio * 60.0)
+
         self.turn_motor = FalconMotor(config.turn_motor_id)
         self.turn_encoder = ctre.WPI_CANCoder(config.turn_encoder_id)
 
