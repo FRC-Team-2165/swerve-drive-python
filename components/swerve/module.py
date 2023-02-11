@@ -188,7 +188,7 @@ class SwerveModule:
     def _optimize(self, state: Polar) -> Polar:
         a = self._optimize_angle(state.theta)
         speed = state.magnitude
-        if a % 360 != state.theta % 360:
+        if abs(a % 360 - state.theta % 360) > 0.01: # not equal
             speed = -speed
         return Polar(speed, a)
 
