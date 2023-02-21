@@ -1,6 +1,8 @@
 import math
 
-from wpimath.geometry import Rotation2d, Translation2d
+from wpimath.geometry import Translation2d
+
+from wpilib import MotorSafety
 
 import ctre
 import rev
@@ -10,6 +12,8 @@ from components.swerve.vector import Polar
 
 SWERVE_WHEEL_RADIUS = 0.0508 # meters
 SWERVE_WHEEL_CIRCUMFERENCE = 2 * math.pi * SWERVE_WHEEL_RADIUS 
+
+MAX_NEO_SPEED = 1 #mps
 
 from dataclasses import dataclass
 
@@ -33,7 +37,7 @@ class SwerveModuleConfig:
     this value doesn't need to be set.
     """
 
-class SwerveModule:
+class SwerveModule(MotorSafety):
     """
     Represents a serve drive module based on Falcon 500 motors and the CTRE CANCoder magnetic encoder.
     Specifically designed for the MK4i swerve module kits from Swerve Drive Specialties.
@@ -60,10 +64,7 @@ class SwerveModule:
 
     relative_position: Translation2d
 
-    gear_ratio: float
-    
-
-
+    # gear_ratio: float
 
     def __init__(self, config: SwerveModuleConfig):
         """
@@ -81,7 +82,9 @@ class SwerveModule:
 
         self.relative_position = config.relative_position
 
-        self.gear_ratio = config.gear_ratio
+        # self.gear_ratio = config.gear_ratio
+
+        self._position = Translation2d(self.relative_position.X(), self.relative_position.Y())
         
     
     @property
@@ -109,13 +112,12 @@ class SwerveModule:
         self.angle = state.theta
         self.speed = state.magnitude
 
-    # def set_state_mps(self, state: kinematics.SwerveModuleState) -> None:
-    #     """
-    #     Sets the state of the module, with speed in m/s. Runs optimization to minimize heading change.
-    #     """
-    #     state = kinematics.SwerveModuleState.optimize(state, Rotation2d.fromDegrees(self.angle))
-    #     self.angle = state.angle.degrees()
-    #     self.speed_mps = state.speed
+    def set_state_mps(self, state: Polar) -> None:
+        """
+        Set the state of the module, with a speed from negative to positive MAX_NEO_SPEED. Runs optimization to minimize heading change.
+        """
+        normal = Polar(state.magnitude / MAX_NEO_SPEED, state.theta)
+        self.set_state(normal)
 
     def get_state(self) -> Polar:
         """
@@ -148,40 +150,48 @@ class SwerveModule:
         if(abs(speed) > 1):
             speed /= abs(speed) # cap, while retaining sign
         self.drive_motor.set(speed)
+        self._update_position()
+        self.feed()
+
+    @property
+    def speed_mps(self) -> float:
+        """Returns the drive motor's approximate speed, in meters per second."""
+        return self.drive_encoder.getVelocity()
+
+    @speed_mps.setter
+    def speed_mps(self, speed: float) -> None:
+        """Sets the drive motor's speed, in meters per second"""
+        self.speed = speed / MAX_NEO_SPEED
+    
+    def stopMotor(self) -> None:
+        self.drive_motor.stopMotor()
+        self.turn_motor.stopMotor()
+
+    @property
+    def position(self) -> Translation2d:
+        return self._position
 
     def stopMotor(self) -> None:
         self.drive_motor.stopMotor()
         self.turn_motor.stopMotor()
-    
-    # @property
-    # def speed_mps(self) -> float:
-    #     """Returns the drive motor's approximate speed, in meters per second."""
-    #     return falcon_to_mps(self.speed, SWERVE_WHEEL_CIRCUMFERENCE, self.gear_ratio)
 
-    # @speed_mps.setter
-    # def speed_mps(self, speed: float) -> None:
-    #     """Sets the drive motor's speed, in meters per second"""
-    #     self.speed = mps_to_falcon(speed, SWERVE_WHEEL_CIRCUMFERENCE, self.gear_ratio)
+
+    def reset_position(self) -> None:
+        self._position = self.relative_position
 
     def rotation_angle(self) -> float:
         base = self.relative_position.angle().degrees() + 90
         return base
-        # return self._closer_angle(base, (base + 180)%360)
     
     def offset_from_center(self) -> float:
-        return math.sqrt(self.relative_position.X()**2 + self.relative_position.Y()**2)
+        return self.relative_position.distance()
+        # return math.sqrt(self.relative_position.X()**2 + self.relative_position.Y()**2)
 
-    # def _closer_angle(self, angle1: float, angle2: float) -> float:
-    #     """
-    #     Returns the angle that is closer to the module's current angle.
 
-    #     This is most useful for angle optimization when the drive motor is not being used,
-    #     for example to brace the robot by setting the wheels in a certain position.
-    #     """
-    #     if abs(self.angle - angle1) < abs(self.angle - angle2):
-    #         return angle1
-    #     else:
-    #         return angle2
+    def _update_position(self) -> None:
+        distance = self.speed * 0.02 # the time step since last update
+        angle = self.angle() * math.pi / 180
+        self._position += Translation2d(distance * math.sin(angle), distance * math.cos(angle))
 
     def _optimize_angle(self, angle: float) -> float:
         offset = self._angle() // 360
@@ -193,7 +203,7 @@ class SwerveModule:
     def _optimize(self, state: Polar) -> Polar:
         a = self._optimize_angle(state.theta)
         speed = state.magnitude
-        if a % 360 != state.theta % 360:
+        if abs(a % 360 - state.theta % 360) > 0.01: # not equal
             speed = -speed
         return Polar(speed, a)
 
