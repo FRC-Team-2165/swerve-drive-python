@@ -2,14 +2,12 @@ from components.swerve.module import SwerveModule, SwerveModuleConfig
 from components.swerve.vector import Polar, Cartesian
 
 from wpimath import applyDeadband
+from wpimath.geometry import Translation2d, Pose2d
 
 from wpilib import SmartDashboard as sd
+from wpilib.drive import RobotDriveBase
 
-import math
-
-    
-
-class SwerveDrive:
+class SwerveDrive(RobotDriveBase):
     front_left: SwerveModule
     front_right: SwerveModule
     rear_left: SwerveModule
@@ -18,11 +16,14 @@ class SwerveDrive:
     previous_speed: float
 
 
+
     def __init__(self, front_left_cfg: SwerveModuleConfig,
                        front_right_cfg: SwerveModuleConfig,
                        rear_left_cfg: SwerveModuleConfig,
                        rear_right_cfg: SwerveModuleConfig,
                        deadband: float = 0):
+
+        super().__init__()
         self.front_left = SwerveModule(front_left_cfg)
         self.front_right = SwerveModule(front_right_cfg)
         self.rear_left = SwerveModule(rear_left_cfg)
@@ -33,6 +34,11 @@ class SwerveDrive:
         self.deadband = deadband
         self.previous_speed = (0, 0)
 
+    def setDeadband(self, deadband: float) -> None:
+        self.deadband = deadband
+
+    def getDescription(self) -> str:
+        return "SwerveDrive"
     
     def drive(self, xSpeed: float, ySpeed: float, rot: float, current_angle: float = 0, square_inputs: bool = False) -> None:
         """
@@ -62,18 +68,6 @@ class SwerveDrive:
         ySpeed = applyDeadband(ySpeed, self.deadband)
         rot = applyDeadband(rot, self.deadband)
 
-        # if xSpeed == 0 and ySpeed == 0 and rot == 0:
-        #     for m in self.modules:
-        #         m.speed = 0
-        #     return
-
-
-        
-        # A field-relative drive with a constant rotation of 0 is just be a "normal" drive, eliminating 
-        # the need to have a gyro in SwerveDrive itself, instead reserving it for the subsystem level
-        # chassis_speeds = ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, -ySpeed, -rot, Rotation2d.fromDegrees(current_angle))
-
-        # module_states = self.kinematics.toSwerveModuleStates(chassis_speeds)
 
         # Convert cartesian vector input to polar vector. Makes all of the math *much* simpler.
         target_vector = Cartesian(xSpeed, -ySpeed).to_polar()
@@ -106,6 +100,7 @@ class SwerveDrive:
                 self.modules[i].speed = 0
             else:
                 self.modules[i].set_state(s)
+        self.feed()
 
     def initialize(self) -> None:
         """
@@ -115,8 +110,7 @@ class SwerveDrive:
         """
         for m in self.modules:
             m.set_state(Polar(0, 90))
-            # m.angle = m._closer_angle(90, -90)
-            # m.speed = 0
+        self.feed()
 
     def brace(self) -> None:
         """
@@ -126,18 +120,30 @@ class SwerveDrive:
         Optimizes angle of the "X" relative to the module's previous angle. Cancelled by any other drive call.
         """
         self.front_left.set_state(Polar(0, 45))
-        # self.front_left.angle = self.front_left._closer_angle(45, -135)
-        # self.front_left.speed = 0
         self.front_right.set_state(Polar(0, -45))
-        # self.front_right.angle = self.front_right._closer_angle(-45, 135)
-        # self.front_right.speed = 0
         self.rear_left.set_state(Polar(0, -45))
-        # self.rear_left.angle = self.rear_left._closer_angle(-45, 135)
-        # self.rear_left.speed = 0
         self.rear_right.set_state(Polar(0, 45))
-        # self.rear_right.angle = self.rear_right._closer_angle(45, -135)
-        # self.rear_right.speed = 0
+        self.feed()
 
     def stopMotor(self) -> None:
+        """
+        Disables the drive until `drive` is called again.
+        """
         for m in self.modules:
             m.stopMotor()
+        self.feed()
+    
+    def position(self) -> Translation2d:
+        # TODO: Make more implementation agnostic way of solving. Currently relies on relative_position, 
+        # which technically shouldn't be public
+        # Also maybe can't handle rotation at present. This may be a problem that cancels itself out though.
+        
+        return sum((m.position - m.relative_position for m in self.modules), start=Translation2d()) * (1 / len(self.modules))
+    
+    def reset_position(self) -> None:
+        """
+        Resets the tracked position of the drive. Does not affect the state of the drive, only the odometry.
+        """
+        for m in self.modules:
+            m.reset_position()
+    
