@@ -70,7 +70,7 @@ class SwerveDrive(RobotDriveBase):
 
 
         # Convert cartesian vector input to polar vector. Makes all of the math *much* simpler.
-        target_vector = Cartesian(xSpeed, -ySpeed).to_polar()
+        target_vector = Cartesian(-xSpeed, ySpeed).to_polar()
         target_vector.theta -= current_angle
 
         max_module_distance = max(m.offset_from_center() for m in self.modules)
@@ -138,7 +138,9 @@ class SwerveDrive(RobotDriveBase):
         # which technically shouldn't be public
         # Also maybe can't handle rotation at present. This may be a problem that cancels itself out though.
         
-        return sum((m.position - m.relative_position for m in self.modules), start=Translation2d()) * (1 / len(self.modules))
+        pos = sum([m.position - m.relative_position for m in self.modules], start = Translation2d()) * (1 / len(self.modules))
+        pos = Translation2d(-pos.Y(), pos.X())
+        return pos
     
     def reset_position(self) -> None:
         """

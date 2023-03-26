@@ -1,5 +1,6 @@
 import wpilib
 
+sd = wpilib.SmartDashboard
 
 from subsystems.drivetrain import DriveTrain
 
@@ -28,6 +29,12 @@ class SwerveBot(wpilib.TimedRobot):
                          self.controller.getRightX(), 
                          field_relative = True,
                          square_inputs = False)
+
+        pos = self.drive._drive.position()
+        sd.putNumber("Robot X", pos.X())
+        sd.putNumber("Robot Y", pos.Y())
+        
+                        
 
 if __name__ == "__main__":
     wpilib.run(SwerveBot)
