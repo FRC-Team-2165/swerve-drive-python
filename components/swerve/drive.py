@@ -2,7 +2,7 @@ from components.swerve.module import SwerveModule, SwerveModuleConfig
 from components.swerve.vector import Polar, Cartesian
 
 from wpimath import applyDeadband
-from wpimath.geometry import Translation2d
+from wpimath.geometry import Translation2d, Pose2d
 
 from wpilib import SmartDashboard as sd
 from wpilib.drive import RobotDriveBase
@@ -16,11 +16,14 @@ class SwerveDrive(RobotDriveBase):
     previous_speed: float
 
 
+
     def __init__(self, front_left_cfg: SwerveModuleConfig,
                        front_right_cfg: SwerveModuleConfig,
                        rear_left_cfg: SwerveModuleConfig,
                        rear_right_cfg: SwerveModuleConfig,
                        deadband: float = 0):
+
+        super().__init__()
         self.front_left = SwerveModule(front_left_cfg)
         self.front_right = SwerveModule(front_right_cfg)
         self.rear_left = SwerveModule(rear_left_cfg)
@@ -64,7 +67,7 @@ class SwerveDrive(RobotDriveBase):
 
 
         # Convert cartesian vector input to polar vector. Makes all of the math *much* simpler.
-        target_vector = Cartesian(xSpeed, -ySpeed).to_polar()
+        target_vector = Cartesian(-xSpeed, ySpeed).to_polar()
         target_vector.theta -= current_angle
 
         max_module_distance = max(m.offset_from_center() for m in self.modules)
@@ -130,7 +133,10 @@ class SwerveDrive(RobotDriveBase):
         # TODO: Make more implementation agnostic way of solving. Currently relies on relative_position, 
         # which technically shouldn't be public
         # Also maybe can't handle rotation at present. This may be a problem that cancels itself out though.
-        return sum(m.position - m.relative_position for m in self.modules)
+        
+        pos = sum([m.position - m.relative_position for m in self.modules], start = Translation2d()) * (1 / len(self.modules))
+        pos = Translation2d(-pos.Y(), pos.X())
+        return pos
     
     def reset_position(self) -> None:
         """
@@ -138,3 +144,4 @@ class SwerveDrive(RobotDriveBase):
         """
         for m in self.modules:
             m.reset_position()
+    

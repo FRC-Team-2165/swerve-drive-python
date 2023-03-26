@@ -5,6 +5,7 @@ from wpimath.geometry import Translation2d
 from wpilib import MotorSafety
 
 import ctre
+import ctre.sensors
 import rev
 
 from components.swerve.falcon_helper import *
@@ -27,9 +28,9 @@ class SwerveModuleConfig:
     "The CAN id of the CANCoder"
     relative_position: Translation2d # offset from the center of the robot
     "The position of the module, relative to the center of the robot."
-    inverted: bool # Should the drive motor be inverted
+    inverted: bool = False # Should the drive motor be inverted
     "The inversion of the drive motor. Turn motor can't be inverted."
-    gear_ratio: float # The gear ratio of the drive wheel, in falcon rotations per wheel rotation
+    gear_ratio: float = 1 # The gear ratio of the drive wheel, in falcon rotations per wheel rotation
     """
     The gear ratio of the drive wheel, in motor rotations per wheel rotation.
 
@@ -60,7 +61,8 @@ class SwerveModule(MotorSafety):
     drive_motor: rev.CANSparkMax
     drive_encoder: rev.SparkMaxRelativeEncoder
     turn_motor: FalconMotor
-    turn_encoder: ctre.WPI_CANCoder
+    turn_encoder: ctre.sensors.WPI_CANCoder
+    
 
     relative_position: Translation2d
 
@@ -71,12 +73,15 @@ class SwerveModule(MotorSafety):
         Creates the swerve module according the given configuration. See SwerveModuleConfig for 
         more information on configuration options.
         """
+        super().__init__()
+
         self.drive_motor = rev.CANSparkMax(config.drive_motor_id, rev.CANSparkMax.MotorType.kBrushless)
         self.drive_encoder = self.drive_motor.getEncoder()
-        self.drive_encoder.setVelocityConversionFactor(SWERVE_WHEEL_CIRCUMFERENCE / config.gear_ratio * 60.0)
+        self.drive_encoder.setVelocityConversionFactor(SWERVE_WHEEL_CIRCUMFERENCE / (config.gear_ratio * 60.0))
+        self.drive_encoder.setPositionConversionFactor(SWERVE_WHEEL_CIRCUMFERENCE / config.gear_ratio)
 
         self.turn_motor = FalconMotor(config.turn_motor_id)
-        self.turn_encoder = ctre.WPI_CANCoder(config.turn_encoder_id)
+        self.turn_encoder = ctre.sensors.WPI_CANCoder(config.turn_encoder_id)
 
         self.drive_motor.setInverted(config.inverted)
 
@@ -184,13 +189,12 @@ class SwerveModule(MotorSafety):
         return base
     
     def offset_from_center(self) -> float:
-        return self.relative_position.distance()
-        # return math.sqrt(self.relative_position.X()**2 + self.relative_position.Y()**2)
+        return self.relative_position.distance(Translation2d())
 
 
     def _update_position(self) -> None:
-        distance = self.speed * 0.02 # the time step since last update
-        angle = self.angle() * math.pi / 180
+        distance = self.speed_mps * 0.02 # the time step since last update
+        angle = self.angle * math.pi / 180
         self._position += Translation2d(distance * math.sin(angle), distance * math.cos(angle))
 
     def _optimize_angle(self, angle: float) -> float:
