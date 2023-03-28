@@ -7,14 +7,15 @@ from wpimath.geometry import Translation2d, Pose2d
 from wpilib import SmartDashboard as sd
 from wpilib.drive import RobotDriveBase
 
+from copy import copy
+
 class SwerveDrive(RobotDriveBase):
     front_left: SwerveModule
     front_right: SwerveModule
     rear_left: SwerveModule
     rear_right: SwerveModule
 
-    previous_speed: float
-
+    _position: Polar
 
 
     def __init__(self, front_left_cfg: SwerveModuleConfig,
@@ -32,7 +33,10 @@ class SwerveDrive(RobotDriveBase):
         self.modules = [self.front_left, self.front_right, self.rear_left, self.rear_right]
 
         self.deadband = deadband
-        self.previous_speed = (0, 0)
+
+        self._position = Polar(0, 0)
+
+        
 
     def setDeadband(self, deadband: float) -> None:
         self.deadband = deadband
@@ -102,6 +106,12 @@ class SwerveDrive(RobotDriveBase):
                 self.modules[i].set_state(s)
         self.feed()
 
+        net_vector = sum((m.get_state_mps() for m in self.modules), start=Polar(0, 0))
+        net_vector.theta += current_angle
+        net_vector.magnitude *= 0.02 / len(self.modules)
+        self._position += net_vector
+        
+
     def initialize(self) -> None:
         """
         Puts the swerve module wheels facing parallel to the orientation of the robot.
@@ -137,15 +147,13 @@ class SwerveDrive(RobotDriveBase):
         # TODO: Make more implementation agnostic way of solving. Currently relies on relative_position, 
         # which technically shouldn't be public
         # Also maybe can't handle rotation at present. This may be a problem that cancels itself out though.
-        
-        pos = sum([m.position - m.relative_position for m in self.modules], start = Translation2d()) * (1 / len(self.modules))
-        pos = Translation2d(-pos.Y(), pos.X())
-        return pos
-    
+
+        trans = self._position.to_translation2d()
+        return Translation2d(-trans.X(), trans.Y())
+
     def reset_position(self) -> None:
         """
         Resets the tracked position of the drive. Does not affect the state of the drive, only the odometry.
         """
-        for m in self.modules:
-            m.reset_position()
+        self._position = Translation2d()
     

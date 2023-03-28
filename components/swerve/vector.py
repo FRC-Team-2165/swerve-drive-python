@@ -1,11 +1,16 @@
 from dataclasses import dataclass
-
 import math
+
+from wpimath.geometry import Translation2d, Rotation2d
 
 @dataclass
 class Polar:
     magnitude: float
     theta: float
+
+    @staticmethod
+    def zero() -> "Cartesian":
+        return Cartesian(0, 0)
 
     def to_cartesian(self) -> "Cartesian":
         r, theta = self.magnitude, self.theta
@@ -19,11 +24,18 @@ class Polar:
 
     def __add__(self, vec: "Polar") -> "Polar":
         return (self.to_cartesian() + vec.to_cartesian()).to_polar()
+    
+    def to_translation2d(self) -> Translation2d:
+        return Translation2d(self.magnitude, Rotation2d.fromDegrees(self.theta))
 
 @dataclass
 class Cartesian:
     x: float
     y: float
+    
+    @staticmethod
+    def zero() -> "Polar":
+        return Polar(0, 0)
 
     def to_polar(self) -> Polar:
         x, y = self.x, self.y
@@ -49,3 +61,6 @@ class Cartesian:
     def __add__(self, vec: "Cartesian") -> "Cartesian":
         vec = vec.to_cartesian()
         return Cartesian(self.x + vec.x, self.y + vec.y)
+    
+    def to_translation2d(self) -> Translation2d:
+        return Translation2d(self.x, self.y)

@@ -33,6 +33,10 @@ class SwerveBot(wpilib.TimedRobot):
         pos = self.drive._drive.position()
         sd.putNumber("Robot X", pos.X())
         sd.putNumber("Robot Y", pos.Y())
+        sd.putNumber("wheel speed", self.drive._drive.modules[0].speed_mps)
+        raw_pos = self.drive._drive._position.to_cartesian()
+        sd.putNumber("Robot Raw X", raw_pos.x)
+        sd.putNumber("Robot Raw Y", raw_pos.y)
         
                         
 

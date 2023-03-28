@@ -14,7 +14,7 @@ from components.swerve.vector import Polar
 SWERVE_WHEEL_RADIUS = 0.0508 # meters
 SWERVE_WHEEL_CIRCUMFERENCE = 2 * math.pi * SWERVE_WHEEL_RADIUS 
 
-MAX_NEO_SPEED = 1 #mps
+MAX_NEO_SPEED = 3.55 #mps
 
 from dataclasses import dataclass
 
@@ -89,7 +89,7 @@ class SwerveModule(MotorSafety):
 
         # self.gear_ratio = config.gear_ratio
 
-        self.reset_position()
+        # self.reset_position()
         
     
     @property
@@ -128,7 +128,13 @@ class SwerveModule(MotorSafety):
         """
         Returns a representation of the current state of the module.
         """
-        return Polar(self.speed, self._angle())
+        return Polar(self.speed, self.angle)
+
+    def get_state_mps(self) -> Polar:
+        """
+        Returns a representation of the current state of the module with the speed in m/s.
+        """
+        return Polar(self.speed_mps, self.angle)
 
     @property
     def angle(self) -> float:
@@ -155,7 +161,7 @@ class SwerveModule(MotorSafety):
         if(abs(speed) > 1):
             speed /= abs(speed) # cap, while retaining sign
         self.drive_motor.set(speed)
-        self._update_position()
+        # self._update_position()
         self.feed()
 
     @property
@@ -172,9 +178,9 @@ class SwerveModule(MotorSafety):
         self.drive_motor.stopMotor()
         self.turn_motor.stopMotor()
 
-    @property
-    def position(self) -> Translation2d:
-        return self._position
+    # @property
+    # def position(self) -> Translation2d:
+    #     return self._position
 
     def stopMotor(self) -> None:
         self.drive_motor.stopMotor()
@@ -182,8 +188,8 @@ class SwerveModule(MotorSafety):
         self.feed()
 
 
-    def reset_position(self) -> None:
-        self._position = Translation2d(self.relative_position.X(), self.relative_position.Y())
+    # def reset_position(self) -> None:
+    #     self._position = Translation2d(self.relative_position.X(), self.relative_position.Y())
 
     def rotation_angle(self) -> float:
         base = self.relative_position.angle().degrees() + 90
@@ -193,10 +199,10 @@ class SwerveModule(MotorSafety):
         return self.relative_position.distance(Translation2d())
 
 
-    def _update_position(self) -> None:
-        distance = self.speed_mps * 0.02 # the time step since last update
-        angle = self.angle * math.pi / 180
-        self._position += Translation2d(distance * math.sin(angle), distance * math.cos(angle))
+    # def _update_position(self) -> None:
+    #     distance = self.speed_mps * 0.02 # the time step since last update
+    #     angle = self.angle * math.pi / 180
+    #     self._position += Translation2d(distance * math.sin(angle), distance * math.cos(angle))
 
     def _optimize_angle(self, angle: float) -> float:
         offset = self._angle() // 360
