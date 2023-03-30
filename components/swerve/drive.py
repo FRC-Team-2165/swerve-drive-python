@@ -74,7 +74,7 @@ class SwerveDrive(RobotDriveBase):
 
 
         # Convert cartesian vector input to polar vector. Makes all of the math *much* simpler.
-        target_vector = Cartesian(-xSpeed, ySpeed).to_polar()
+        target_vector = Cartesian(xSpeed, -ySpeed).to_polar()
         target_vector.theta -= current_angle
 
         max_module_distance = max(m.offset_from_center() for m in self.modules)
