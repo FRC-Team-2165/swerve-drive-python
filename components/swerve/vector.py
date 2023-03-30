@@ -26,7 +26,7 @@ class Polar:
         return (self.to_cartesian() + vec.to_cartesian()).to_polar()
     
     def to_translation2d(self) -> Translation2d:
-        return Translation2d(self.magnitude, Rotation2d.fromDegrees(self.theta))
+        return Translation2d(distance=self.magnitude, angle=Rotation2d.fromDegrees(self.theta))
 
 @dataclass
 class Cartesian:
