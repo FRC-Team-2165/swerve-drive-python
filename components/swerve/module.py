@@ -174,10 +174,6 @@ class SwerveModule(MotorSafety):
         """Sets the drive motor's speed, in meters per second"""
         self.speed = speed / MAX_NEO_SPEED
     
-    def stopMotor(self) -> None:
-        self.drive_motor.stopMotor()
-        self.turn_motor.stopMotor()
-
     # @property
     # def position(self) -> Translation2d:
     #     return self._position

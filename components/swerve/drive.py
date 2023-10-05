@@ -94,8 +94,8 @@ class SwerveDrive(RobotDriveBase):
         # Desaturate module speeds. Very necessary.
         top_speed = max(m.magnitude for m in module_states)
         if top_speed > 1:
-            for m in module_states:
-                m.magnitude /= top_speed
+            for state in module_states:
+                state.magnitude /= top_speed
 
 
         for i, s in enumerate(module_states):
@@ -155,5 +155,5 @@ class SwerveDrive(RobotDriveBase):
         """
         Resets the tracked position of the drive. Does not affect the state of the drive, only the odometry.
         """
-        self._position = Translation2d()
+        self._position = Polar(0, 0)
     
