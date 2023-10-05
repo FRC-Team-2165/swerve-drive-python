@@ -37,8 +37,7 @@ class SwerveBot(wpilib.TimedRobot):
         raw_pos = self.drive._drive._position.to_cartesian()
         sd.putNumber("Robot Raw X", raw_pos.x)
         sd.putNumber("Robot Raw Y", raw_pos.y)
-        
-                        
+                                
 
 if __name__ == "__main__":
     wpilib.run(SwerveBot)
