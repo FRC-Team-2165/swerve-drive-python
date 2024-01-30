@@ -1,0 +1,18 @@
+[project]
+name = "swerve-2165"
+version = "2024.1.0"
+dependencies = [
+    "robotpy-ctre",
+    "robotpy-rev",
+    "robotpy-navx",
+]
+requires-python = ">= 3.11"
+authors = [
+    {name = "Kellen Watt", email = "kellen@wattsoft.dev"},
+]
+license = {file = "LICENSE"}
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+]
+
+

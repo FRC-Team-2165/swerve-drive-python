@@ -22,7 +22,8 @@ class SwerveDrive(RobotDriveBase):
                        front_right_cfg: SwerveModuleConfig,
                        rear_left_cfg: SwerveModuleConfig,
                        rear_right_cfg: SwerveModuleConfig,
-                       deadband: float = 0):
+                       deadband: float = 0,
+                       starting_position: Polar = Polar(0, 0)):
 
         super().__init__()
         self.front_left = SwerveModule(front_left_cfg)
@@ -34,7 +35,7 @@ class SwerveDrive(RobotDriveBase):
 
         self.deadband = deadband
 
-        self._position = Polar(0, 0)
+        self._position = starting_position.to_polar()
 
         
 
@@ -61,7 +62,7 @@ class SwerveDrive(RobotDriveBase):
         either don't supply the argument, or constantly set it to 0. This is because a robot-relative
         drive is the same as a field-relative drive, but where the "gyro" input is always 0 ("forward").
 
-        Inputs are trimmed by the deadband value passed to the SwerveDrive constructor.
+        Inputs are trimmed by the deadband value passed to the SwerveDrive constructor, after squaring.
         """
         if square_inputs:
             xSpeed *= abs(xSpeed)
@@ -81,7 +82,7 @@ class SwerveDrive(RobotDriveBase):
 
         module_states: list[Polar] = []
         # Combine target vector with rotation state for each module.
-        # Final vector is a weighted average of rotation and target vectors, based on proportion of combined magnitude.
+        # Final vector is a sum of weighted rotation vector and target vector.
         for m in self.modules:
             rotation_angle = m.rotation_angle()
             if rot > 0: 
@@ -91,7 +92,7 @@ class SwerveDrive(RobotDriveBase):
 
             module_states.append(target_vector + rotation)
 
-        # Desaturate module speeds. Very necessary.
+        # Desaturate (normalize) module speeds. Very necessary.
         top_speed = max(m.magnitude for m in module_states)
         if top_speed > 1:
             for state in module_states:
@@ -106,9 +107,9 @@ class SwerveDrive(RobotDriveBase):
                 self.modules[i].set_state(s)
         self.feed()
 
-        net_vector = sum((m.get_state_mps() for m in self.modules), start=Polar(0, 0))
+        net_vector = sum((m.get_state_mps() for m in self.modules), start=Polar.zero())
         net_vector.theta += current_angle
-        net_vector.magnitude *= 0.02 / len(self.modules)
+        net_vector.magnitude *= 0.02 / len(self.modules) # 0.02 from robot running at 50Hz.
         self._position += net_vector
         
 
@@ -125,7 +126,8 @@ class SwerveDrive(RobotDriveBase):
     def brace(self) -> None:
         """
         Put the swerve module wheels into an "X" position at a full stop, so as to maximize resistance 
-        to being moved involuntarily.
+        to being moved involuntarily. Note: The wheel angles are at 45 and not parallel to the center 
+        because that creates the most resistance on average in all robots, including non-square.
 
         Optimizes angle of the "X" relative to the module's previous angle. Cancelled by any other drive call.
         """
@@ -144,9 +146,7 @@ class SwerveDrive(RobotDriveBase):
         self.feed()
     
     def position(self) -> Translation2d:
-        # TODO: Make more implementation agnostic way of solving. Currently relies on relative_position, 
-        # which technically shouldn't be public
-        # Also maybe can't handle rotation at present. This may be a problem that cancels itself out though.
+        # May not account for rotation, but also may be a non-issue
 
         trans = self._position.to_translation2d()
         return Translation2d(-trans.X(), trans.Y())
@@ -155,5 +155,5 @@ class SwerveDrive(RobotDriveBase):
         """
         Resets the tracked position of the drive. Does not affect the state of the drive, only the odometry.
         """
-        self._position = Polar(0, 0)
+        self._position = Polar.zero()
     

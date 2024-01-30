@@ -1,12 +1,20 @@
 import math
-
 from wpimath.geometry import Translation2d
 
 from wpilib import MotorSafety
 
-import ctre
-import ctre.sensors
+
+
+import phoenix5 as ctre
+import phoenix5.sensors as sensors
+
+# import ctre
+# import ctre.sensors
 import rev
+
+FalconMotor = ctre.TalonFX
+CANCoder = sensors.CANCoder
+
 
 from components.swerve.falcon_helper import *
 from components.swerve.vector import Polar
@@ -40,16 +48,16 @@ class SwerveModuleConfig:
 
 class SwerveModule(MotorSafety):
     """
-    Represents a serve drive module based on Falcon 500 motors and the CTRE CANCoder magnetic encoder.
+    Represents a swerve drive module based on Falcon 500 motors and the CTRE CANCoder magnetic encoder.
     Specifically designed for the MK4i swerve module kits from Swerve Drive Specialties.
 
-    All angle control in these modules assumes that you have calibrated your CANCoders to be at 0 when
+    All angle control in these modules assumes that you have calibrated your CANCoders to be at -90 when
     the wheels are well-aligned to go forward. 
 
     Assumptions:
     - CANCoder
         - measures the angle range from [-180, 180)
-        - has been offset so that the 0 position refers to when the wheel facing a quarter rotation right
+        - has been offset so that the 0 position refers to when the wheel facing a quarter rotation clockwise
         - clockwise rotations increase angle, counterclockwise decrease
         - relative value set to absolute position on boot
     - Turning Motor
@@ -61,7 +69,7 @@ class SwerveModule(MotorSafety):
     drive_motor: rev.CANSparkMax
     drive_encoder: rev.SparkMaxRelativeEncoder
     turn_motor: FalconMotor
-    turn_encoder: ctre.sensors.WPI_CANCoder
+    turn_encoder: CANCoder
     
 
     relative_position: Translation2d
@@ -81,7 +89,8 @@ class SwerveModule(MotorSafety):
         self.drive_encoder.setPositionConversionFactor(SWERVE_WHEEL_CIRCUMFERENCE / config.gear_ratio)
 
         self.turn_motor = FalconMotor(config.turn_motor_id)
-        self.turn_encoder = ctre.sensors.WPI_CANCoder(config.turn_encoder_id)
+        # self.turn_encoder = ctre.sensors.WPI_CANCoder(config.turn_encoder_id)
+        self.turn_encoder = CANCoder(config.turn_encoder_id)
 
         self.drive_motor.setInverted(config.inverted)
 
@@ -145,7 +154,8 @@ class SwerveModule(MotorSafety):
     def angle(self, angle: float) -> None:
         """Sets the current angle in degrees. Values outside the range [0, 360) will be normalized."""
         angle = self._optimize_angle(angle)
-        self.turn_motor.set(ctre.ControlMode.Position, degrees_to_CANCoder(angle))
+        cancoder_value = 4096 / 360.0 * angle
+        self.turn_motor.set(ctre.ControlMode.Position, cancoder_value)
 
     def _angle(self) -> float:
         return self.turn_encoder.getPosition()
@@ -161,7 +171,6 @@ class SwerveModule(MotorSafety):
         if(abs(speed) > 1):
             speed /= abs(speed) # cap, while retaining sign
         self.drive_motor.set(speed)
-        # self._update_position()
         self.feed()
 
     @property
@@ -174,9 +183,6 @@ class SwerveModule(MotorSafety):
         """Sets the drive motor's speed, in meters per second"""
         self.speed = speed / MAX_NEO_SPEED
     
-    # @property
-    # def position(self) -> Translation2d:
-    #     return self._position
 
     def stopMotor(self) -> None:
         self.drive_motor.stopMotor()
@@ -184,21 +190,14 @@ class SwerveModule(MotorSafety):
         self.feed()
 
 
-    # def reset_position(self) -> None:
-    #     self._position = Translation2d(self.relative_position.X(), self.relative_position.Y())
-
     def rotation_angle(self) -> float:
         base = self.relative_position.angle().degrees() + 90
         return base
     
     def offset_from_center(self) -> float:
-        return self.relative_position.distance(Translation2d())
+        return self.relative_position.norm()
+        # return self.relative_position.distance(Translation2d())
 
-
-    # def _update_position(self) -> None:
-    #     distance = self.speed_mps * 0.02 # the time step since last update
-    #     angle = self.angle * math.pi / 180
-    #     self._position += Translation2d(distance * math.sin(angle), distance * math.cos(angle))
 
     def _optimize_angle(self, angle: float) -> float:
         offset = self._angle() // 360

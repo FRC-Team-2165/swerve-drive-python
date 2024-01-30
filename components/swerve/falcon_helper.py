@@ -1,7 +1,3 @@
-import ctre
-
-FalconMotor = ctre.WPI_TalonFX
-
 FALCON_PULSE_COUNT = 2048
 FALCON_SLOT_IDX = 0
 FALCON_MAX_RPM = 6380

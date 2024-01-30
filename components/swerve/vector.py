@@ -9,7 +9,7 @@ class Polar:
     theta: float
 
     @staticmethod
-    def zero() -> "Cartesian":
+    def zero() -> "Polar":
         return Cartesian(0, 0)
 
     def to_cartesian(self) -> "Cartesian":
@@ -17,7 +17,7 @@ class Polar:
         theta *= math.pi/180
         x = r * math.cos(theta)
         y = r * math.sin(theta)
-        return Cartesian(x, y)
+        return Polar(x, y)
     
     def to_polar(self) -> "Polar":
         return self
@@ -34,8 +34,8 @@ class Cartesian:
     y: float
     
     @staticmethod
-    def zero() -> "Polar":
-        return Polar(0, 0)
+    def zero() -> "Cartesian":
+        return Cartesian(0, 0)
 
     def to_polar(self) -> Polar:
         x, y = self.x, self.y
